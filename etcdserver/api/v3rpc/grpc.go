@@ -34,7 +34,7 @@ const (
 	maxSendBytes      = math.MaxInt32
 )
 
-func Server(s *etcdserver.EtcdServer, tls *tls.Config, gopts ...grpc.ServerOption) *grpc.Server {
+func Server(s *etcdserver.EtcdServer, tls *tls.Config, interceptor grpc.UnaryServerInterceptor, gopts ...grpc.ServerOption) *grpc.Server {
 	var opts []grpc.ServerOption
 	opts = append(opts, grpc.CustomCodec(&codec{}))
 	if tls != nil {
@@ -46,6 +46,11 @@ func Server(s *etcdserver.EtcdServer, tls *tls.Config, gopts ...grpc.ServerOptio
 		newUnaryInterceptor(s),
 		grpc_prometheus.UnaryServerInterceptor,
 	)))
+	if interceptor != nil {
+		opts = append(opts, grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			interceptor,
+		)))
+	}
 	opts = append(opts, grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
 		newStreamInterceptor(s),
 		grpc_prometheus.StreamServerInterceptor,
